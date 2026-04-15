@@ -1,0 +1,102 @@
+---
+title: "Student Performance"
+author: Alina, Sasha, Katya, Sharvin
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Data
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(dplyr)
+student_data <- read.csv("~/Desktop/student_lifestyle_performance_dataset.csv")
+
+head(student_data)
+```
+**This is our original data. We will clean it up a bit to only include useful parts for our analysis.**
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+student_cleaned <- student_data %>%
+  mutate(Attendance_Percentages = Attendance_Percentage /100)%>%
+  select( Attendance_Percentages, Stress_Level_1_to_10) %>%
+  rename(Stress_Rating = Stress_Level_1_to_10) %>%
+  drop_na() %>%
+  filter(Stress_Rating != 0.00) %>%
+  arrange(Attendance_Percentages)
+  
+
+head(student_cleaned)
+
+
+```
+
+
+# Graph of Points
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+ggplot(student_cleaned, aes(x = Attendance_Percentages, y = Stress_Rating)) +
+  geom_point(color = "turquoise3") +
+  geom_smooth(method = "lm", color = "darkorchid3")
+```
+
+
+# Residual Analysis
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+stress_mod <- lm(Stress_Rating ~ Attendance_Percentages, data = student_cleaned)
+
+
+
+
+
+stress_resids <- student_cleaned %>% 
+  mutate(residuals = resid(stress_mod)) %>% 
+  select(Attendance_Percentages, Stress_Rating, residuals)
+  
+
+
+stress_resids %>%
+  ggplot(aes(x = Attendance_Percentages, y = residuals)) +
+  geom_point(color = "turquoise3") +
+  geom_hline(yintercept = 0, color = "darkorchid3")
+```
+
+## *Note
+**When doing the residual analysis to check linear regression assumptions, we can see that out data has a megaphone shape, which means we don't have constant variance. We will keep this in mind as a shortcoming of our analysis of the data. **
+
+
+# Hypothesis Testing
+
+
+**Null hypothesis:** there is no relationship between class attendance and stress levels (slope = 0)
+
+**Alternative hypothesis:** there is a positive relationship between class attendance and stress levels (slope > 0)
+
+**Significance Level:** 0.05
+
+
+# Result
+
+Calculating test stat: 
+```{r}
+pt_est <- summary(stress_mod)$coefficients[2, 1]
+se <- summary(stress_mod)$coefficients[2, 2]
+n <- nrow(student_cleaned)
+
+test_stat <- (pt_est - 0) / se
+
+test_stat
+```
+
+
+Finding P-Value: 
+```{r}
+pt(test_stat, df = n-2, lower.tail = FALSE)
+```
+
+# Conclusion 
+
+Since our p-value is less than 0.05, we have enough evidence to conclude that there **is** a positive relationship between class attendance and stress levels of students!
